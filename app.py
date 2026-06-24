@@ -8,9 +8,26 @@ from tensorflow.keras.optimizers import Adam
 import numpy as np
 import requests
 import os
+import json
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)
+
+# ── Make Flask JSON provider handle numpy types ──
+from flask.json.provider import DefaultJSONProvider
+
+class NumpyJSONProvider(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+app.json_provider_class = NumpyJSONProvider
+app.json = NumpyJSONProvider(app)
 
 API_KEY = "ccdf0efdfba224c382832d024c586c93"
 
@@ -159,8 +176,8 @@ def simulate():
     total_unmet = float(np.sum(unmet_load))
 
     return jsonify({
-        "t":              list(t),
-        "t_nn":           list(t[1:]),
+        "t":              [int(x) for x in t],
+        "t_nn":           [int(x) for x in t[1:]],
         "P_load":         P_load.tolist(),
         "P_solar":        P_solar.tolist(),
         "P_wind":         P_wind.tolist(),
