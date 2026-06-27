@@ -1,10 +1,6 @@
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPRegressor
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -47,8 +43,8 @@ Smart Grid Builder
 st.sidebar.header("Control Panel")
 temp, humidity = get_weather()
 
-st.sidebar.write(f"🌡️ Temp: {temp} °C")
-st.sidebar.write(f"💧 Humidity: {humidity}%")
+st.sidebar.write(f"Temp: {temp} °C")
+st.sidebar.write(f"Humidity: {humidity}%")
 
 load_value = st.sidebar.slider("Load Demand (kW)", 20, 150, 80)
 
@@ -60,10 +56,8 @@ use_grid = st.sidebar.toggle("Enable Grid", True)
 solar_intensity = st.sidebar.slider("Solar Intensity", 0, 100, 70)
 wind_speed = st.sidebar.slider("Wind Speed", 0, 15, 5)
 
-# ===== TIME =====
 t = np.arange(24)
 
-# ===== GENERATION =====
 P_solar = np.zeros(24)
 if use_solar:
     P_solar = solar_intensity * np.maximum(0, np.sin(np.pi*(t-6)/12))
@@ -97,23 +91,10 @@ predicted_lr = lr_model.predict(X_lr)
 X_nn = P_load[:-1].reshape(-1,1)
 y_nn = P_load[1:].reshape(-1,1)
 
-scaler_X = StandardScaler()
-scaler_y = StandardScaler()
-
-X_scaled = scaler_X.fit_transform(X_nn)
-y_scaled = scaler_y.fit_transform(y_nn)
-
-# Neural Network
-nn_model = Sequential([
-    Dense(10, activation="relu", input_shape=(1,)),
-    Dense(1)
-])
-
-nn_model.compile(optimizer=Adam(0.01), loss="mse")
-nn_model.fit(X_scaled, y_scaled, epochs=100, verbose=0)
-
-y_pred_scaled = nn_model.predict(X_scaled)
-predicted_nn = scaler_y.inverse_transform(y_pred_scaled).flatten()
+# Neural Network (Optimized to MLPRegressor for real-time responsiveness)
+nn_model = MLPRegressor(hidden_layer_sizes=(10,), activation="relu", max_iter=200, random_state=42)
+nn_model.fit(X_nn, y_nn.ravel())
+predicted_nn = nn_model.predict(X_nn)
 
 t_nn = t[1:]
 
@@ -175,12 +156,12 @@ unmet_load = np.array(unmet_load)
 total_unmet = np.sum(unmet_load)
 
 if total_unmet > 0:
-    st.error(f"⚠️ POWER CUT! Unserved Energy = {total_unmet:.2f} kW")
+    st.error(f"POWER CUT! Unserved Energy = {total_unmet:.2f} kW")
 else:
     st.success("All demand successfully met")
 
 # ===== STATUS DISPLAY =====
-st.markdown("## 📊 Simulation Results")
+st.markdown("## Simulation Results")
 st.write(f"Load Demand: {load_value} kW")
 st.write(f"Solar: {'ON' if use_solar else 'OFF'}")
 st.write(f"Wind: {'ON' if use_wind else 'OFF'}")

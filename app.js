@@ -1,32 +1,33 @@
 // ── Detect backend URL (same origin in production, localhost in dev) ──
-const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-  ? "http://localhost:5000"
-  : "";   // same origin in production
+const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:")
+  ? "http://127.0.0.1:5000"
+  : "";   
 
-// ── Chart colour palette matching CSS vars ──
 const COLORS = {
-  load:     "#e6edf3",
-  solar:    "#f7c948",
-  wind:     "#3fb950",
-  battery:  "#a371f7",
-  grid:     "#f78166",
-  ren:      "#58a6ff",
-  spilled:  "#f78166",
-  stored:   "#a371f7",
-  used:     "#3fb950",
-  level:    "#58a6ff",
-  ai:       "#f7c948",
+  load:     "#f8fafc",
+  solar:    "#f59e0b",
+  wind:     "#06b6d4",
+  battery:  "#8b5cf6",
+  grid:     "#ef4444",
+  ren:      "#6366f1",
+  spilled:  "#f97316",
+  stored:   "#8b5cf6",
+  used:     "#10b981",
+  level:    "#6366f1",
+  ai:       "#3b82f6",
+  cost:     "#ef4444",
+  price:    "#f59e0b"
 };
 
-// ── Chart registry so we can destroy before redraw ──
 const charts = {};
+window.customLoadProfile = null;
 
 function mkChart(id, cfg) {
   if (charts[id]) charts[id].destroy();
   charts[id] = new Chart(document.getElementById(id), cfg);
 }
 
-// ── Chart.js global defaults ──
+
 Chart.defaults.color         = "#8b949e";
 Chart.defaults.borderColor   = "#30363d";
 Chart.defaults.font.family   = "Inter, sans-serif";
@@ -56,7 +57,7 @@ function lineOpts(labels, datasets, yLabel = "kW") {
   };
 }
 
-// ── Gather current control values ──
+
 function getParams() {
   return {
     load_value:      +document.getElementById("load-slider").value,
@@ -66,6 +67,7 @@ function getParams() {
     use_grid:        document.getElementById("grid-toggle").checked,
     solar_intensity: +document.getElementById("solar-slider").value,
     wind_speed:      +document.getElementById("wind-slider").value,
+    custom_load_profile: window.customLoadProfile,
   };
 }
 
@@ -125,27 +127,54 @@ function renderCharts(d) {
       { label: "Predicted Load", borderColor: COLORS.ai,  data: [null, ...d.predicted_nn], borderDash: [5,3] },
     ]
   ));
+
+  // 7) Time-of-Use Cost
+  if (d.hourly_costs && d.prices) {
+    mkChart("chart-cost", {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { type: "line", label: "Grid Price ($/kWh)", borderColor: COLORS.price, data: d.prices, yAxisID: "y1", borderDash: [2,2] },
+          { type: "bar", label: "Hourly Grid Cost ($)", backgroundColor: COLORS.cost, data: d.hourly_costs, yAxisID: "y" }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { title: { display: true, text: "Cost ($)" }, position: "left" },
+          y1: { title: { display: true, text: "Price ($)" }, position: "right", grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+  }
 }
 
-// ── Update summary cards ──
 function updateSummary(d) {
   document.getElementById("s-load").textContent    = d.load_value + " kW";
   document.getElementById("s-solar").textContent   = d.use_solar   ? "ON" : "OFF";
   document.getElementById("s-wind").textContent    = d.use_wind    ? "ON" : "OFF";
   document.getElementById("s-battery").textContent = d.use_battery ? "ON" : "OFF";
   document.getElementById("s-grid").textContent    = d.use_grid    ? "ON" : "OFF";
+  document.getElementById("s-cost").textContent    = "$" + (d.total_cost || 0).toFixed(2);
+  document.getElementById("s-savings").textContent = "$" + (d.total_savings || 0).toFixed(2);
 
   const banner = document.getElementById("status-banner");
   if (d.total_unmet > 0) {
     banner.className = "banner banner-error";
-    banner.textContent = `⚠️ POWER CUT! Unserved Energy = ${d.total_unmet.toFixed(2)} kW`;
+    banner.textContent = `POWER CUT! Unserved Energy = ${d.total_unmet.toFixed(2)} kW`;
   } else {
     banner.className = "banner banner-success";
-    banner.textContent = "✅ All demand successfully met";
+    banner.textContent = "All demand successfully met";
+  }
+
+  const aiInsightText = document.getElementById("ai-insight-text");
+  if (aiInsightText && d.ai_insight) {
+    aiInsightText.textContent = d.ai_insight;
   }
 }
 
-// ── Core: call backend and refresh UI ──
 async function runSimulation() {
   try {
     const res = await fetch(`${API_BASE}/api/simulate`, {
@@ -169,9 +198,72 @@ async function loadWeather() {
     const data = await res.json();
     document.getElementById("temp-val").textContent = `${data.temp} °C`;
     document.getElementById("hum-val").textContent  = `${data.humidity}%`;
+    // We could also show cloud cover and wind speed here, but they affect simulation in the background
   } catch {
     document.getElementById("temp-val").textContent = "30 °C";
     document.getElementById("hum-val").textContent  = "60%";
+  }
+}
+
+// ── History & CSV ──
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/api/history`);
+    const data = await res.json();
+    const tbody = document.querySelector("#history-table tbody");
+    tbody.innerHTML = "";
+    data.forEach(row => {
+      // The database saves in UTC. Add 'Z' so JS knows it's UTC and converts to local time.
+      const date = new Date(row.timestamp.replace(" ", "T") + "Z");
+      const localTime = date.toLocaleString();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${localTime}</td>
+        <td>${row.load_value.toFixed(1)}</td>
+        <td>${row.total_unmet.toFixed(1)}</td>
+        <td>$${row.total_cost.toFixed(2)}</td>
+        <td class="success">$${row.total_savings.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error("Failed to load history", err);
+  }
+}
+
+async function uploadCSV() {
+  const fileInput = document.getElementById("csv-file-input");
+  const resultDiv = document.getElementById("csv-upload-result");
+  if (!fileInput.files.length) {
+    resultDiv.innerHTML = "<span class='banner-error'>Please select a CSV file</span>";
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  
+  try {
+    resultDiv.innerHTML = "Uploading...";
+    const res = await fetch(`${API_BASE}/api/upload-csv`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    
+    resultDiv.innerHTML = `<span class='banner-success'>${data.message}. Avg Load: ${data.average_load.toFixed(1)}kW. Updating simulation...</span>`;
+    
+    // Store the custom profile so the simulation uses exactly these values
+    window.customLoadProfile = data.load_profile;
+    
+    // Update the slider to reflect the average, but the simulation will use the custom profile array
+    const loadSlider = document.getElementById("load-slider");
+    loadSlider.value = data.suggested_load_value;
+    document.getElementById("load-display").textContent = data.suggested_load_value.toFixed(1) + " (Custom CSV)";
+    
+    runSimulation();
+  } catch(err) {
+    resultDiv.innerHTML = `<span class='banner-error'>${err.message}</span>`;
   }
 }
 
@@ -182,6 +274,7 @@ function wireControls() {
   const windSlider  = document.getElementById("wind-slider");
 
   loadSlider.addEventListener("input", () => {
+    window.customLoadProfile = null; // Clear custom profile when user manually changes slider
     document.getElementById("load-display").textContent = loadSlider.value;
     debounce(runSimulation);
   });
@@ -199,9 +292,12 @@ function wireControls() {
   });
 }
 
-// ── Bootstrap ──
 document.addEventListener("DOMContentLoaded", () => {
   wireControls();
   loadWeather();
   runSimulation();
+  loadHistory();
+  
+  document.getElementById("refresh-history-btn").addEventListener("click", loadHistory);
+  document.getElementById("upload-csv-btn").addEventListener("click", uploadCSV);
 });

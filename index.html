@@ -13,34 +13,33 @@
 <body>
   <div class="layout">
 
-    <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar">
-      <div class="sidebar-title">⚡ Smart Grid Builder</div>
+      <div class="sidebar-title">Smart Grid Builder</div>
 
       <div class="sidebar-section">Control Panel</div>
 
       <div class="weather-card" id="weather-card">
-        <div class="weather-row"><span>🌡️ Temp</span><span id="temp-val">Loading…</span></div>
-        <div class="weather-row"><span>💧 Humidity</span><span id="hum-val">—</span></div>
+        <div class="weather-row"><span>Temp</span><span id="temp-val">Loading…</span></div>
+        <div class="weather-row"><span>Humidity</span><span id="hum-val">—</span></div>
       </div>
 
       <label class="slider-label">Load Demand (kW): <span id="load-display">80</span></label>
       <input type="range" id="load-slider" min="20" max="150" value="80" />
 
       <div class="toggle-group">
-        <label class="toggle-label"><span>☀️ Enable Solar</span>
+        <label class="toggle-label"><span>Enable Solar</span>
           <input type="checkbox" id="solar-toggle" checked />
           <span class="toggle-switch"></span>
         </label>
-        <label class="toggle-label"><span>🌬️ Enable Wind</span>
+        <label class="toggle-label"><span>Enable Wind</span>
           <input type="checkbox" id="wind-toggle" checked />
           <span class="toggle-switch"></span>
         </label>
-        <label class="toggle-label"><span>🔋 Enable Battery</span>
+        <label class="toggle-label"><span>Enable Battery</span>
           <input type="checkbox" id="battery-toggle" checked />
           <span class="toggle-switch"></span>
         </label>
-        <label class="toggle-label"><span>🔌 Enable Grid</span>
+        <label class="toggle-label"><span>Enable Grid</span>
           <input type="checkbox" id="grid-toggle" checked />
           <span class="toggle-switch"></span>
         </label>
@@ -53,27 +52,29 @@
       <input type="range" id="wind-slider" min="0" max="15" value="5" />
     </aside>
 
-    <!-- ===== MAIN CONTENT ===== -->
     <main class="main">
-      <h1 class="page-title">📊 AI-Optimized Smart Grid</h1>
+      <h1 class="page-title">AI-Optimized Smart Grid</h1>
 
-      <!-- Status Banner -->
-      <div id="status-banner" class="banner banner-success">✅ All demand successfully met</div>
+      <div id="status-banner" class="banner banner-success">All demand successfully met</div>
 
-      <!-- Simulation Summary -->
+      <div class="ai-insight-box">
+        <span class="ai-icon"></span>
+        <span id="ai-insight-text">AI is analyzing grid data...</span>
+      </div>
+
       <div class="summary-grid">
         <div class="summary-card"><div class="label">Load Demand</div><div class="value" id="s-load">80 kW</div></div>
         <div class="summary-card"><div class="label">Solar</div><div class="value" id="s-solar">ON</div></div>
         <div class="summary-card"><div class="label">Wind</div><div class="value" id="s-wind">ON</div></div>
         <div class="summary-card"><div class="label">Battery</div><div class="value" id="s-battery">ON</div></div>
         <div class="summary-card"><div class="label">Grid</div><div class="value" id="s-grid">ON</div></div>
+        <div class="summary-card highlight-card"><div class="label">Grid Cost</div><div class="value" id="s-cost">$0.00</div></div>
+        <div class="summary-card highlight-card success"><div class="label">Ren Savings</div><div class="value" id="s-savings">$0.00</div></div>
       </div>
 
-      <!-- Charts Row 1 -->
       <h2 class="section-title">Energy Source Distribution</h2>
       <div class="chart-full"><canvas id="chart-main"></canvas></div>
 
-      <!-- Charts Row 2 -->
       <div class="chart-row">
         <div class="chart-card">
           <h3>Load vs Renewable</h3>
@@ -85,7 +86,6 @@
         </div>
       </div>
 
-      <!-- Battery Charts (conditional) -->
       <div id="battery-section">
         <div class="chart-row">
           <div class="chart-card">
@@ -99,11 +99,51 @@
         </div>
       </div>
 
-      <!-- AI Forecast -->
       <h2 class="section-title">AI Load Forecast vs Actual</h2>
       <div class="chart-full"><canvas id="chart-ai"></canvas></div>
 
-      <footer>Built with ❤️ using AI — Renewable Energy Simulation Dashboard</footer>
+      <h2 class="section-title">Time-of-Use Cost Optimization</h2>
+      <div class="chart-full"><canvas id="chart-cost"></canvas></div>
+
+      <h2 class="section-title">Custom Data Prediction</h2>
+      <div class="csv-upload-section">
+        <p class="instruction-text">
+          <strong>Upload a CSV file</strong> to run predictions on your custom historical data. <br/>
+          <em>Format instructions:</em> The CSV must contain a column named <code>load</code> or <code>demand</code> with numerical values (e.g., hourly kW readings). <br/>
+          Example: <br/>
+          <code>time,load</code><br/>
+          <code>00:00,45.2</code><br/>
+          <code>01:00,42.1</code>
+        </p>
+        <div class="upload-controls">
+          <input type="file" id="csv-file-input" accept=".csv" />
+          <button id="upload-csv-btn" class="btn">Upload & Predict</button>
+        </div>
+        <div id="csv-upload-result"></div>
+      </div>
+
+      <h2 class="section-title">Simulation History</h2>
+      <div class="history-section">
+        <button id="refresh-history-btn" class="btn">Refresh History</button>
+        <div class="table-container">
+          <table id="history-table">
+            <thead>
+              <tr>
+                <th>Date/Time</th>
+                <th>Load (kW)</th>
+                <th>Unmet (kW)</th>
+                <th>Cost ($)</th>
+                <th>Savings ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- History rows will be injected here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer></footer>
     </main>
   </div>
 
