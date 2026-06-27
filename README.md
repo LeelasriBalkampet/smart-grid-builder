@@ -1,6 +1,5 @@
-# Smart Grid Builder ⚡
+# Smart Grid Builder 
 
-![Live Demo](https://img.shields.io/badge/Live_Demo-Available-success?style=for-the-badge)  
 **Live Application:** [https://smart-grid-builder.onrender.com](https://smart-grid-builder.onrender.com)
 
 ## About the Project
@@ -11,11 +10,11 @@ The platform utilizes a Machine Learning model (Scikit-Learn `MLPRegressor`) to 
 
 ## Key Features
 
-* **🧠 AI Load Forecasting:** Deep learning model predicts future power demands over a 24-hour cycle.
-* **💸 Time-of-Use Cost Optimization:** Smart heuristic algorithms dynamically shift battery discharging to peak-price hours, visualizing thousands of dollars in potential savings.
-* **☁️ Real-Time Weather Integration:** Fetches live cloud cover and wind speed from the OpenWeatherMap API to dynamically calculate realistic solar and wind energy generation.
-* **📊 Custom CSV Data Processing:** Upload your own historical energy demand CSV files. The application parses the data in real-time and runs custom simulations against your specific load profiles.
-* **💾 Persistent History:** Backed by an SQLite database, every simulation is recorded and available for review in the History dashboard.
+* **AI Load Forecasting:** Deep learning model predicts future power demands over a 24-hour cycle.
+* **Time-of-Use Cost Optimization:** Smart heuristic algorithms dynamically shift battery discharging to peak-price hours, visualizing thousands of dollars in potential savings.
+* **Real-Time Weather Integration:** Fetches live cloud cover and wind speed from the OpenWeatherMap API to dynamically calculate realistic solar and wind energy generation.
+* **Custom CSV Data Processing:** Upload your own historical energy demand CSV files. The application parses the data in real-time and runs custom simulations against your specific load profiles.
+* **Persistent History:** Backed by an SQLite database, every simulation is recorded and available for review in the History dashboard.
 
 ## Tech Stack
 
@@ -24,9 +23,7 @@ The platform utilizes a Machine Learning model (Scikit-Learn `MLPRegressor`) to 
 * **Frontend:** Vanilla JavaScript, HTML5, CSS3, Chart.js
 * **Deployment:** Docker, Gunicorn, Render
 
----
-
-## 🚀 How to Run Locally
+## How to Run Locally
 
 ### 1. Clone the repository
 ```bash
@@ -47,9 +44,8 @@ python app.py
 ```
 Open your browser and navigate to `http://localhost:5000`
 
----
 
-## 📈 Using the CSV Upload Feature
+## Using the CSV Upload Feature
 
 You can upload your own custom load profiles to simulate how the grid would handle your specific power demands. 
 
